@@ -1,7 +1,7 @@
 import app from "./app";
 import listRoutes from "express-list-routes";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.APP_PORT || 3000;
 
 console.log(`\nIniciando o servidor na porta ${PORT}... 😁\n`)
 
