@@ -1,16 +1,40 @@
-version: "3.9"
 services:
-  db:
-    image: mysql:8.0
-    container_name: patrimonio_mysql
+  mysql:
+    image: mysql:8.0.40
+    container_name: sgpi
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
-      MYSQL_DATABASE: sgpi
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "9306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+    networks:
+      - inventario_net
 
-volumes:
-  mysql_data:
+  prisma-studio:
+    image: node:20
+    container_name: studio
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "npm install && npx prisma generate && npx prisma studio"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "5555:5555"
+    networks:
+      - inventario_net
+
+networks:
+  inventario_net:
+    driver: bridge
