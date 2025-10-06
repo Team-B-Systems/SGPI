@@ -6,10 +6,142 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+
+enum EstadoEquipamento {
+  EM_USO
+  MANUTENCAO
+  OBSOLETO
+  AVARIADO
+}
+
+model Tipo {
+  idTipo            Int             @id @default(autoincrement())
+  nome              String
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  equipamentos      Equipamento[]
+}
+
+model Fabricante {
+  idFabricante      Int             @id @default(autoincrement())
+  nome              String
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  equipamentos      Equipamento[]
+}
+
+model Marca {
+  idMarca           Int             @id @default(autoincrement())
+  nome              String
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  equipamentos      Equipamento[]
+}
+
+model Departamento {
+  idDepartamento    Int             @id @default(autoincrement())
+  nome              String
+  sigla             String
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  utilizadores      Utilizador[]
+  secoes            Seccao[]
+}
+
+model Seccao {
+  idSeccao          Int             @id @default(autoincrement())
+  nome              String
+  sigla             String
+  idDepartamento    Int
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  departamento      Departamento    @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: Cascade)
+  responsaveis      Responsavel[]
+  equipamentos      Equipamento[]
+
+  @@index([idDepartamento])
+}
+
+model Responsavel {
+  codResponsavel    Int             @id @default(autoincrement())
+  nome              String
+  idSeccao          Int
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  seccao            Seccao          @relation(fields: [idSeccao], references: [idSeccao], onDelete: Cascade)
+  equipamentos      Equipamento[]
+}
+
+model Utilizador {
+  idUtilizador      Int             @id @default(autoincrement())
+  username          String          @unique
+  password          String
+  idDepartamento    Int?
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  departamento      Departamento?   @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: SetNull)
+  equipamentos      Equipamento[]
+}
+
+model Equipamento {
+  idEquipamento     Int             @id @default(autoincrement())
+  nome              String
+  descricao         String?         @db.Text
+  modelo            String
+  numeroSerie       String          @unique
+  quantidade        Int
+  dataAquisicao     DateTime
+  estado            EstadoEquipamento
+  valorEstimado     Decimal         @db.Decimal(15, 2)
+  idTipo            Int
+  idFabricante      Int
+  idMarca           Int
+  idSeccao          Int
+  idUtilizador      Int
+  idResponsavel     Int?
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  tipo              Tipo            @relation(fields: [idTipo], references: [idTipo], onDelete: Cascade)
+  fabricante        Fabricante      @relation(fields: [idFabricante], references: [idFabricante], onDelete: Cascade)
+  marca             Marca           @relation(fields: [idMarca], references: [idMarca], onDelete: Cascade)
+  seccao            Seccao          @relation(fields: [idSeccao], references: [idSeccao], onDelete: Cascade)
+  utilizador        Utilizador      @relation(fields: [idUtilizador], references: [idUtilizador], onDelete: Cascade)
+  responsavel       Responsavel?    @relation(fields: [idResponsavel], references: [codResponsavel], onDelete: SetNull)
+  amortizacoes      Amortizacao[]
+
+  @@index([idTipo])
+  @@index([idSeccao])
+  @@index([dataAquisicao])
+}
+
+model Amortizacao {
+  idAmortizacao     Int             @id @default(autoincrement())
+  metodo            String
+  tempoUtilAnos     Int
+  valorInicial      Decimal         @db.Decimal(15, 2)
+  valorResidual     Decimal?        @db.Decimal(15, 2)
+  valorAmortizado   Decimal?        @db.Decimal(15, 2)
+  dataCalculo       DateTime
+  idEquipamento     Int
+  dataRegisto       DateTime        @default(now())
+  dataActualizacao  DateTime        @updatedAt
+
+  equipamento       Equipamento     @relation(fields: [idEquipamento], references: [idEquipamento], onDelete: Cascade)
+
+  @@index([idEquipamento])
 }
