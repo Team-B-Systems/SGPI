@@ -1,8 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ==========================================================
+// SIGEP — Sistema Integrado de Gestão Patrimonial
+// Prisma Schema
+// ==========================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -13,135 +12,358 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================================
+// ENUMS
+// ==========================================================
 
 enum EstadoEquipamento {
   EM_USO
   MANUTENCAO
   OBSOLETO
   AVARIADO
+  ABATIDO
+}
+
+enum EstadoLote {
+  ATIVO
+  PARCIALMENTE_ABATIDO
+  TOTALMENTE_ABATIDO
+}
+
+enum NivelAcesso {
+  ADMIN
+  GESTOR
+  TECNICO
+  UTILIZADOR
+}
+
+enum TipoEvento {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  OTHER
+}
+
+enum TipoManutencao {
+  PREVENTIVA
+  CORRETIVA
+  INSPECAO
+  OUTRA
+}
+
+enum EstadoManutencao {
+  PENDENTE
+  EM_EXECUCAO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum MotivoAbate {
+  FIM_VIDA_UTIL
+  SINISTRO
+  FURTO_ROUBO
+  ACIDENTE
+  INOPERANCIA
+  OBSOLESCENCIA_TECNOLOGICA
+  OBSOLESCENCIA_AMBIENTAL
+  TRANSFERENCIA
+  OUTRO
+}
+
+enum DecisaoAbate {
+  VENDA_HASTA_PUBLICA
+  TRANSFERENCIA_GRATUITA
+  DESMANTELAMENTO
+  RECUPERACAO
+  REJEITADO
+}
+
+enum StatusAbate {
+  PENDENTE
+  EM_AVALIACAO
+  APROVADO
+  REJEITADO
+  FINALIZADO
+}
+
+enum MotivoMovimentacao {
+  TRANSFERENCIA_INTERNA
+  MANUTENCAO
+  ALOCACAO_NOVA
+  OUTRO
+}
+
+// ==========================================================
+// MODELOS
+// ==========================================================
+
+model EventoSistema {
+  id               Int        @id @default(autoincrement())
+  tipoEvento       TipoEvento
+  entidade         String
+  entidadeId       Int?
+  descricao        String?
+  detalhes         Json?
+  ipOrigem         String?
+  utilizadorId     Int?
+  dataRegisto      DateTime   @default(now())
+  dataActualizacao DateTime   @updatedAt
+
+  utilizador Utilizador? @relation(fields: [utilizadorId], references: [idUtilizador], onDelete: SetNull)
+
+  @@index([utilizadorId])
+  @@index([entidade])
+  @@index([tipoEvento])
+  @@index([dataRegisto])
 }
 
 model Tipo {
-  idTipo            Int             @id @default(autoincrement())
-  nome              String
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idTipo           Int      @id @default(autoincrement())
+  nome             String
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  equipamentos      Equipamento[]
+  equipamentos Equipamento[]
+  lotes        Lote[]
 }
 
 model Fabricante {
-  idFabricante      Int             @id @default(autoincrement())
-  nome              String
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idFabricante     Int      @id @default(autoincrement())
+  nome             String
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  equipamentos      Equipamento[]
+  equipamentos Equipamento[]
+  lotes        Lote[]
 }
 
 model Marca {
-  idMarca           Int             @id @default(autoincrement())
-  nome              String
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idMarca          Int      @id @default(autoincrement())
+  nome             String
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  equipamentos      Equipamento[]
+  equipamentos Equipamento[]
+  lotes        Lote[]
 }
 
 model Departamento {
-  idDepartamento    Int             @id @default(autoincrement())
-  nome              String
-  sigla             String
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idDepartamento   Int      @id @default(autoincrement())
+  nome             String
+  sigla            String
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  utilizadores      Utilizador[]
-  secoes            Seccao[]
+  utilizadores Utilizador[]
+  secoes       Seccao[]
 }
 
 model Seccao {
-  idSeccao          Int             @id @default(autoincrement())
-  nome              String
-  sigla             String
-  idDepartamento    Int
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idSeccao         Int      @id @default(autoincrement())
+  nome             String
+  sigla            String
+  idDepartamento   Int
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  departamento      Departamento    @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: Cascade)
-  responsaveis      Responsavel[]
-  equipamentos      Equipamento[]
+  departamento         Departamento   @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: Cascade)
+  responsaveis         Responsavel[]
+  equipamentos         Equipamento[]
+  movimentacoesOrigem  Movimentacao[] @relation("Origem")
+  movimentacoesDestino Movimentacao[] @relation("Destino")
 
   @@index([idDepartamento])
 }
 
 model Responsavel {
-  codResponsavel    Int             @id @default(autoincrement())
-  nome              String
-  idSeccao          Int
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  codResponsavel   Int      @id @default(autoincrement())
+  nome             String
+  idSeccao         Int
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  seccao            Seccao          @relation(fields: [idSeccao], references: [idSeccao], onDelete: Cascade)
-  equipamentos      Equipamento[]
+  seccao        Seccao         @relation(fields: [idSeccao], references: [idSeccao], onDelete: Cascade)
+  equipamentos  Equipamento[]
+  movimentacoes Movimentacao[]
 }
 
 model Utilizador {
-  idUtilizador      Int             @id @default(autoincrement())
-  username          String          @unique
-  password          String
-  idDepartamento    Int?
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idUtilizador   Int         @id @default(autoincrement())
+  username       String      @unique
+  email          String      @unique
+  password       String
+  nome           String
+  nivelAcesso    NivelAcesso @default(UTILIZADOR)
+  idDepartamento Int?
 
-  departamento      Departamento?   @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: SetNull)
-  equipamentos      Equipamento[]
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
+
+  departamento  Departamento?   @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: SetNull)
+  equipamentos  Equipamento[]
+  eventos       EventoSistema[]
+  movimentacoes Movimentacao[]
+  manutencoes   Manutencao[]
+}
+
+model Lote {
+  idLote           Int        @id @default(autoincrement())
+  codigo           String     @unique
+  nome             String?
+  quantidade       Int        @default(1)
+  estado           EstadoLote @default(ATIVO)
+  idTipo           Int?
+  idFabricante     Int?
+  idMarca          Int?
+  dataAquisicao    DateTime?
+  valorEstimado    Decimal?   @db.Decimal(15, 2)
+  dataRegisto      DateTime   @default(now())
+  dataActualizacao DateTime   @updatedAt
+
+  tipo          Tipo?          @relation(fields: [idTipo], references: [idTipo], onDelete: SetNull)
+  fabricante    Fabricante?    @relation(fields: [idFabricante], references: [idFabricante], onDelete: SetNull)
+  marca         Marca?         @relation(fields: [idMarca], references: [idMarca], onDelete: SetNull)
+  equipamentos  Equipamento[]
+  abates        Abate[]
+  movimentacoes Movimentacao[]
+
+  @@index([codigo])
+  @@index([estado])
 }
 
 model Equipamento {
-  idEquipamento     Int             @id @default(autoincrement())
-  nome              String
-  descricao         String?         @db.Text
-  modelo            String
-  numeroSerie       String          @unique
-  quantidade        Int
-  dataAquisicao     DateTime
-  estado            EstadoEquipamento
-  valorEstimado     Decimal         @db.Decimal(15, 2)
-  idTipo            Int
-  idFabricante      Int
-  idMarca           Int
-  idSeccao          Int
-  idUtilizador      Int
-  idResponsavel     Int?
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idEquipamento    Int               @id @default(autoincrement())
+  idLote           Int?
+  nome             String
+  descricao        String?           @db.Text
+  modelo           String?
+  numeroSerie      String?           @unique
+  imagem           Bytes?
+  dataAquisicao    DateTime
+  estado           EstadoEquipamento @default(EM_USO)
+  valorEstimado    Decimal           @db.Decimal(15, 2)
+  idTipo           Int
+  idFabricante     Int
+  idMarca          Int
+  idSeccao         Int
+  idUtilizador     Int
+  idResponsavel    Int?
+  dataRegisto      DateTime          @default(now())
+  dataActualizacao DateTime          @updatedAt
 
-  tipo              Tipo            @relation(fields: [idTipo], references: [idTipo], onDelete: Cascade)
-  fabricante        Fabricante      @relation(fields: [idFabricante], references: [idFabricante], onDelete: Cascade)
-  marca             Marca           @relation(fields: [idMarca], references: [idMarca], onDelete: Cascade)
-  seccao            Seccao          @relation(fields: [idSeccao], references: [idSeccao], onDelete: Cascade)
-  utilizador        Utilizador      @relation(fields: [idUtilizador], references: [idUtilizador], onDelete: Cascade)
-  responsavel       Responsavel?    @relation(fields: [idResponsavel], references: [codResponsavel], onDelete: SetNull)
-  amortizacoes      Amortizacao[]
+  lote          Lote?          @relation(fields: [idLote], references: [idLote], onDelete: SetNull)
+  tipo          Tipo           @relation(fields: [idTipo], references: [idTipo], onDelete: Cascade)
+  fabricante    Fabricante     @relation(fields: [idFabricante], references: [idFabricante], onDelete: Cascade)
+  marca         Marca          @relation(fields: [idMarca], references: [idMarca], onDelete: Cascade)
+  seccao        Seccao         @relation(fields: [idSeccao], references: [idSeccao], onDelete: Cascade)
+  utilizador    Utilizador     @relation(fields: [idUtilizador], references: [idUtilizador], onDelete: Cascade)
+  responsavel   Responsavel?   @relation(fields: [idResponsavel], references: [codResponsavel], onDelete: SetNull)
+  amortizacoes  Amortizacao[]
+  movimentacoes Movimentacao[]
+  manutencoes   Manutencao[]
+  abates        Abate[]
 
+  @@index([idLote])
   @@index([idTipo])
   @@index([idSeccao])
   @@index([dataAquisicao])
+  @@index([numeroSerie])
+}
+
+model Abate {
+  idAbate          Int           @id @default(autoincrement())
+  idEquipamento    Int?
+  idLote           Int?
+  motivo           MotivoAbate
+  descricao        String?       @db.Text
+  dataPedido       DateTime      @default(now())
+  relatorioTecnico Bytes?
+  membrosComissao  String
+  decisao          DecisaoAbate?
+  valorVenda       Decimal?      @db.Decimal(15, 2)
+  status           StatusAbate   @default(PENDENTE)
+  dataDecisao      DateTime?
+  dataRegisto      DateTime      @default(now())
+  dataActualizacao DateTime      @updatedAt
+
+  equipamento Equipamento? @relation(fields: [idEquipamento], references: [idEquipamento], onDelete: Cascade)
+  lote        Lote?        @relation(fields: [idLote], references: [idLote], onDelete: Cascade)
+
+  @@index([idEquipamento])
+  @@index([idLote])
+  @@index([status])
+  @@index([dataPedido])
 }
 
 model Amortizacao {
-  idAmortizacao     Int             @id @default(autoincrement())
-  metodo            String
-  tempoUtilAnos     Int
-  valorInicial      Decimal         @db.Decimal(15, 2)
-  valorResidual     Decimal?        @db.Decimal(15, 2)
-  valorAmortizado   Decimal?        @db.Decimal(15, 2)
-  dataCalculo       DateTime
-  idEquipamento     Int
-  dataRegisto       DateTime        @default(now())
-  dataActualizacao  DateTime        @updatedAt
+  idAmortizacao    Int      @id @default(autoincrement())
+  metodo           String
+  taxaAnual        Decimal? @db.Decimal(5, 2)
+  tempoUtilAnos    Int
+  valorInicial     Decimal  @db.Decimal(15, 2)
+  valorResidual    Decimal? @db.Decimal(15, 2)
+  valorAmortizado  Decimal? @db.Decimal(15, 2)
+  dataCalculo      DateTime
+  idEquipamento    Int
+  dataRegisto      DateTime @default(now())
+  dataActualizacao DateTime @updatedAt
 
-  equipamento       Equipamento     @relation(fields: [idEquipamento], references: [idEquipamento], onDelete: Cascade)
+  equipamento Equipamento @relation(fields: [idEquipamento], references: [idEquipamento], onDelete: Cascade)
 
   @@index([idEquipamento])
+}
+
+model Movimentacao {
+  idMovimentacao   Int                @id @default(autoincrement())
+  idEquipamento    Int?
+  idLote           Int?
+  idSeccaoOrigem   Int?
+  idSeccaoDestino  Int
+  idUtilizador     Int?
+  motivo           MotivoMovimentacao
+  descricao        String?            @db.Text
+  anexo            Bytes?
+  dataMovimentacao DateTime           @default(now())
+  dataRegisto      DateTime           @default(now())
+  dataActualizacao DateTime           @updatedAt
+
+  equipamento   Equipamento? @relation(fields: [idEquipamento], references: [idEquipamento], onDelete: Cascade)
+  lote          Lote?        @relation(fields: [idLote], references: [idLote], onDelete: Cascade)
+  seccaoOrigem  Seccao?      @relation("Origem", fields: [idSeccaoOrigem], references: [idSeccao], onDelete: SetNull)
+  seccaoDestino Seccao       @relation("Destino", fields: [idSeccaoDestino], references: [idSeccao], onDelete: Cascade)
+  utilizador    Utilizador?  @relation(fields: [idUtilizador], references: [idUtilizador], onDelete: SetNull)
+  responsavel   Responsavel? @relation(fields: [idResponsavel], references: [codResponsavel], onDelete: SetNull)
+  idResponsavel Int?
+
+  @@index([idEquipamento])
+  @@index([idLote])
+  @@index([idSeccaoOrigem])
+  @@index([idSeccaoDestino])
+  @@index([dataMovimentacao])
+}
+
+model Manutencao {
+  idManutencao       Int              @id @default(autoincrement())
+  idEquipamento      Int
+  idUtilizador       Int?
+  tipo               TipoManutencao
+  estado             EstadoManutencao @default(PENDENTE)
+  descricao          String?          @db.Text
+  custoEstimado      Decimal?         @db.Decimal(15, 2)
+  custoReal          Decimal?         @db.Decimal(15, 2)
+  dataInicioPrevista DateTime?
+  dataInicioReal     DateTime?
+  dataConclusao      DateTime?
+  fornecedor         String?
+  dataRegisto        DateTime         @default(now())
+  dataActualizacao   DateTime         @updatedAt
+
+  equipamento Equipamento @relation(fields: [idEquipamento], references: [idEquipamento], onDelete: Cascade)
+  utilizador  Utilizador? @relation(fields: [idUtilizador], references: [idUtilizador], onDelete: SetNull)
+
+  @@index([idEquipamento])
+  @@index([estado])
+  @@index([dataInicioPrevista])
 }
